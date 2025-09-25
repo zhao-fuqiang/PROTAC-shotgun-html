@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Visualization Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3B82F6',
+                        secondary: '#10B981',
+                        accent: '#8B5CF6',
+                        neutral: '#1F2937',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .chart-container {
+                @apply bg-white rounded-lg shadow-md p-4 transition-all duration-300 hover:shadow-lg;
+            }
+            .fade-in {
+                animation: fadeIn 0.5s ease-in-out;
+            }
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans text-neutral">
+    <header class="bg-gradient-to-r from-primary to-accent text-white shadow-md">
+        <div class="container mx-auto px-4 py-8">
+            <h1 class="text-[clamp(1.8rem,4vw,3rem)] font-bold mb-2">Data Visualization Dashboard</h1>
+            <p class="text-lg opacity-90">Interactive charts for your dataset</p>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-8">
+        <section class="mb-10">
+            <div id="dataStats" class="hidden mb-8 bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-2xl font-semibold mb-4 flex items-center">
+                    <i class="fa fa-bar-chart mr-2 text-primary"></i> Data Statistics
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-blue-50 p-4 rounded-lg border border-blue-100">
+                        <p class="text-sm text-blue-600">Total Rows</p>
+                        <p id="rowCount" class="text-2xl font-bold text-blue-800">0</p>
+                    </div>
+                    <div class="bg-green-50 p-4 rounded-lg border border-green-100">
+                        <p class="text-sm text-green-600">Total Columns</p>
+                        <p id="colCount" class="text-2xl font-bold text-green-800">0</p>
+                    </div>
+                    <div class="bg-purple-50 p-4 rounded-lg border border-purple-100">
+                        <p class="text-sm text-purple-600">Last Updated</p>
+                        <p id="lastUpdated" class="text-2xl font-bold text-purple-800">-</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="chartsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Charts will be inserted here dynamically -->
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-neutral text-white py-8 mt-12">
+        <div class="container mx-auto px-4">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="mb-4 md:mb-0">
+                    <p>Data Visualization Tool</p>
+                    <p class="text-sm opacity-70">Visualize your data with ease</p>
+                </div>
+                <div class="flex space-x-4">
+                    <a href="#" class="hover:text-primary transition-colors"><i class="fa fa-github text-xl"></i></a>
+                    <a href="#" class="hover:text-primary transition-colors"><i class="fa fa-twitter text-xl"></i></a>
+                    <a href="#" class="hover:text-primary transition-colors"><i class="fa fa-linkedin text-xl"></i></a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // 配置你的CSV文件名
+        const DEFAULT_CSV_FILE = "PROTAC_Ternary_Complex_from_PDB.csv"; // 替换为你的CSV文件名
+        
+        // Global variables to store data
+        let csvData = null;
+        let csvHeaders = [];
+
+        // 页面加载时自动加载默认CSV文件
+        window.addEventListener('DOMContentLoaded', function() {
+            // 加载默认CSV文件
+            fetch(DEFAULT_CSV_FILE)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('CSV file not found');
+                    }
+                    return response.text();
+                })
+                .then(csvText => {
+                    parseCSV(csvText);
+                })
+                .catch(error => {
+                    console.error('Error loading CSV file:', error);
+                    alert('Could not load the CSV file. Please check the filename and try again.');
+                });
+        });
+
+        // Parse CSV data using PapaParse
+        function parseCSV(csvText) {
+            Papa.parse(csvText, {
+                header: true,
+                dynamicTyping: true,
+                complete: function(results) {
+                    csvData = results.data;
+                    csvHeaders = results.meta.fields;
+                    
+                    // Update UI with new data
+                    updateDataStats();
+                    createVisualizations();
+                    
+                    // Show containers
+                    document.getElementById('dataStats').classList.remove('hidden');
+                    document.getElementById('chartsContainer').classList.remove('hidden');
+                    
+                    // Add animation
+                    document.querySelectorAll('#dataStats, #chartsContainer').forEach(el => {
+                        el.classList.add('fade-in');
+                    });
+                }
+            });
+        }
+
+        // Update data statistics
+        function updateDataStats() {
+            document.getElementById('rowCount').textContent = csvData.length;
+            document.getElementById('colCount').textContent = csvHeaders.length;
+            
+            const now = new Date();
+            document.getElementById('lastUpdated').textContent = now.toLocaleString();
+        }
+
+        // Create visualizations based on data type
+        function createVisualizations() {
+            const chartsContainer = document.getElementById('chartsContainer');
+            chartsContainer.innerHTML = ''; // Clear previous charts
+            
+            // 创建各类图表
+            if (csvHeaders.length >= 2) {
+                createPieChart(chartsContainer);      // 饼图
+                createBoxPlot(chartsContainer);       // 箱形图
+                createLineChart(chartsContainer);     // 折线图
+                createBarChart(chartsContainer);      // 柱状图
+            }
+        }
+
+        // 创建饼图
+        function createPieChart(container) {
+            // 寻找适合饼图的分类列
+            let categoryCol = null;
+            
+            for (let i = 0; i < csvHeaders.length; i++) {
+                if (typeof csvData[0][csvHeaders[i]] === 'string') {
+                    categoryCol = csvHeaders[i];
+                    break;
+                }
+            }
+            
+            if (categoryCol) {
+                const chartDiv = document.createElement('div');
+                chartDiv.className = 'chart-container';
+                chartDiv.innerHTML = `<h3 class="text-xl font-medium mb-4">Pie Chart: Distribution by ${categoryCol}</h3>
+                                     <canvas id="pieChart"></canvas>`;
+                container.appendChild(chartDiv);
+                
+                const ctx = document.getElementById('pieChart').getContext('2d');
+                
+                // 计算每个类别的数量
+                const categoryCounts = {};
+                csvData.forEach(row => {
+                    const category = row[categoryCol];
+                    categoryCounts[category] = (categoryCounts[category] || 0) + 1;
+                });
+                
+                const labels = Object.keys(categoryCounts);
+                const data = Object.values(categoryCounts);
+                
+                // 生成颜色
+                const colors = labels.map((_, i) => {
+                    const hue = (i * 137) % 360; // 使用黄金角分布颜色
+                    return `hsla(${hue}, 70%, 60%, 0.7)`;
+                });
+                
+                new Chart(ctx, {
+                    type: 'pie',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: data,
+                            backgroundColor: colors,
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const label = context.label || '';
+                                        const value = context.raw || 0;
+                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                        const percentage = Math.round((value / total) * 100);
+                                        return `${label}: ${value} (${percentage}%)`;
+                                    }
+                                }
+                            }
+                        },
+                        animation: {
+                            animateRotate: true,
+                            animateScale: true,
+                            duration: 1000,
+                            easing: 'easeOutQuart'
+                        }
+                    }
+                });
+            }
+        }
+
+        // 创建箱形图
+        function createBoxPlot(container) {
+            // 寻找适合箱形图的数值列
+            const numericColumns = [];
+            csvHeaders.forEach(header => {
+                if (typeof csvData[0][header] === 'number') {
+                    numericColumns.push(header);
+                }
+            });
+            
+            if (numericColumns.length > 0) {
+                const chartDiv = document.createElement('div');
+                chartDiv.className = 'chart-container';
+                chartDiv.innerHTML = `<h3 class="text-xl font-medium mb-4">Box Plot: Data Distribution</h3>
+                                     <canvas id="boxPlot"></canvas>`;
+                container.appendChild(chartDiv);
+                
+                const ctx = document.getElementById('boxPlot').getContext('2d');
+                
+                // 为每个数值列准备箱形图数据
+                const datasets = numericColumns.map((column, index) => {
+                    // 收集该列的所有值
+                    const values = csvData.map(row => row[column]).filter(value => !isNaN(value));
+                    
+                    // 计算箱形图所需的统计数据
+                    const sorted = [...values].sort((a, b) => a - b);
+                    const q1 = getQuartile(sorted, 25);
+                    const q3 = getQuartile(sorted, 75);
+                    const median = getQuartile(sorted, 50);
+                    const iqr = q3 - q1;
+                    const min = Math.max(sorted[0], q1 - 1.5 * iqr);
+                    const max = Math.min(sorted[sorted.length - 1], q3 + 1.5 * iqr);
+                    
+                    // 识别异常值
+                    const outliers = sorted.filter(value => value < min || value > max);
+                    
+                    return {
+                        label: column,
+                        data: [
+                            min,       // min
+                            q1,        // q1
+                            median,    // median
+                            q3,        // q3
+                            max        // max
+                        ],
+                        backgroundColor: `rgba(${30 + index * 50}, ${144 + index * 30}, ${255 - index * 30}, 0.7)`,
+                        borderColor: `rgba(${30 + index * 50}, ${144 + index * 30}, ${255 - index * 30}, 1)`,
+                        borderWidth: 1,
+                        outlierRadius: 4,
+                        outlierColor: `rgba(${30 + index * 50}, ${144 + index * 30}, ${255 - index * 30}, 0.6)`,
+                        outlierBackgroundColor: '#fff',
+                        outlierBorderWidth: 1
+                    };
+                });
+                
+                new Chart(ctx, {
+                    type: 'boxplot',
+                    data: {
+                        datasets: datasets
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const data = context.dataset.data;
+                                        return [
+                                            `Min: ${data[0].toFixed(2)}`,
+                                            `Q1: ${data[1].toFixed(2)}`,
+                                            `Median: ${data[2].toFixed(2)}`,
+                                            `Q3: ${data[3].toFixed(2)}`,
+                                            `Max: ${data[4].toFixed(2)}`
+                                        ];
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Value'
+                                }
+                            }
+                        },
+                        animation: {
+                            duration: 1000,
+                            easing: 'easeOutQuart'
+                        }
+                    }
+                });
+            }
+        }
+
+        // 辅助函数：计算四分位数
+        function getQuartile(sortedArray, percentile) {
+            const index = (percentile / 100) * (sortedArray.length - 1);
+            if (index % 1 === 0) {
+                return sortedArray[index];
+            } else {
+                const lowerIndex = Math.floor(index);
+                const upperIndex = lowerIndex + 1;
+                return sortedArray[lowerIndex] + (index - lowerIndex) * (sortedArray[upperIndex] - sortedArray[lowerIndex]);
+            }
+        }
+
+        // 创建折线图
+        function createLineChart(container) {
+            // 找到前两个数值列
+            let xCol = null;
+            let yCol = null;
+            
+            for (let i = 0; i < csvHeaders.length; i++) {
+                if (typeof csvData[0][csvHeaders[i]] === 'number' || 
+                    !isNaN(Date.parse(csvData[0][csvHeaders[i]]))) {
+                    if (!xCol) {
+                        xCol = csvHeaders[i];
+                    } else if (!yCol) {
+                        yCol = csvHeaders[i];
+                        break;
+                    }
+                }
+            }
+            
+            if (xCol && yCol) {
+                const chartDiv = document.createElement('div');
+                chartDiv.className = 'chart-container';
+                chartDiv.innerHTML = `<h3 class="text-xl font-medium mb-4">Line Chart: ${yCol} vs ${xCol}</h3>
+                                     <canvas id="lineChart"></canvas>`;
+                container.appendChild(chartDiv);
+                
+                const ctx = document.getElementById('lineChart').getContext('2d');
+                
+                // 准备数据
+                const labels = csvData.map(row => row[xCol]);
+                const data = csvData.map(row => row[yCol]);
+                
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: yCol,
+                            data: data,
+                            borderColor: '#3B82F6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            tension: 0.3,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: false,
+                                title: {
+                                    display: true,
+                                    text: yCol
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: xCol
+                                }
+                            }
+                        },
+                        animation: {
+                            duration: 1000
+                        }
+                    }
+                });
+            }
+        }
+
+        // 创建柱状图
+        function createBarChart(container) {
+            // 找到一个分类列和一个数值列
+            let categoryCol = null;
+            let valueCol = null;
+            
+            for (let i = 0; i < csvHeaders.length; i++) {
+                if (typeof csvData[0][csvHeaders[i]] === 'string' && !categoryCol) {
+                    categoryCol = csvHeaders[i];
+                } else if (typeof csvData[0][csvHeaders[i]] === 'number' && !valueCol) {
+                    valueCol = csvHeaders[i];
+                }
+                
+                if (categoryCol && valueCol) break;
+            }
+            
+            if (categoryCol && valueCol) {
+                const chartDiv = document.createElement('div');
+                chartDiv.className = 'chart-container';
+                chartDiv.innerHTML = `<h3 class="text-xl font-medium mb-4">Bar Chart: ${valueCol} by ${categoryCol}</h3>
+                                     <canvas id="barChart"></canvas>`;
+                container.appendChild(chartDiv);
+                
+                const ctx = document.getElementById('barChart').getContext('2d');
+                
+                // 准备数据（按类别聚合）
+                const categories = [...new Set(csvData.map(row => row[categoryCol]))];
+                const data = categories.map(category => {
+                    const items = csvData.filter(row => row[categoryCol] === category);
+                    return items.reduce((sum, item) => sum + item[valueCol], 0) / items.length;
+                });
+                
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: categories,
+                        datasets: [{
+                            label: `Average ${valueCol}`,
+                            data: data,
+                            backgroundColor: 'rgba(16, 185, 129, 0.7)',
+                            borderColor: 'rgba(16, 185, 129, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: valueCol
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: categoryCol
+                                }
+                            }
+                        },
+                        animation: {
+                            duration: 1000
+                        }
+                    }
+                });
+            }
+        }
+    </script>
+</body>
+</html>
+    
