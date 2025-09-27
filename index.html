@@ -149,7 +149,7 @@
 
         // Update data statistics
         function updateDataStats() {
-            document.getElementById('rowCount').textContent = csvData.length;
+            document.getElementById('rowCount').textContent = csvData.length - 1;
             document.getElementById('colCount').textContent = csvHeaders.length;
             
             const now = new Date();
@@ -181,16 +181,16 @@
                     break;
                 }
             }
-            categoryCol = "E3"
-            
+
+            categoryCol = "E3";
             if (categoryCol) {
                 const chartDiv = document.createElement('div');
                 chartDiv.className = 'chart-container';
                 chartDiv.innerHTML = `<h3 class="text-xl font-medium mb-4">Pie Chart: Distribution by ${categoryCol}</h3>
-                                     <canvas id="pieChart"></canvas>`;
+                                     <canvas id="E3pieChart"></canvas>`;
                 container.appendChild(chartDiv);
                 
-                const ctx = document.getElementById('pieChart').getContext('2d');
+                const ctx = document.getElementById('E3pieChart').getContext('2d');
                 
                 // 计算每个类别的数量
                 const categoryCounts = {};
@@ -230,7 +230,71 @@
                                         const label = context.label || '';
                                         const value = context.raw || 0;
                                         const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                        const percentage = Math.round((value / total) * 100);
+                                        const percentage = Math.round((value / (total - 1)) * 100);
+                                        return `${label}: ${value} (${percentage}%)`;
+                                    }
+                                }
+                            }
+                        },
+                        animation: {
+                            animateRotate: true,
+                            animateScale: true,
+                            duration: 1000,
+                            easing: 'easeOutQuart'
+                        }
+                    }
+                });
+            }
+            
+            categoryCol = "POI";
+            if (categoryCol) {
+                const chartDiv = document.createElement('div');
+                chartDiv.className = 'chart-container';
+                chartDiv.innerHTML = `<h3 class="text-xl font-medium mb-4">Pie Chart: Distribution by ${categoryCol}</h3>
+                                     <canvas id="POIpieChart"></canvas>`;
+                container.appendChild(chartDiv);
+                
+                const ctx = document.getElementById('POIpieChart').getContext('2d');
+                
+                // 计算每个类别的数量
+                const categoryCounts = {};
+                csvData.forEach(row => {
+                    const category = row[categoryCol];
+                    categoryCounts[category] = (categoryCounts[category] || 0) + 1;
+                });
+                
+                const labels = Object.keys(categoryCounts);
+                const data = Object.values(categoryCounts);
+                
+                // 生成颜色
+                const colors = labels.map((_, i) => {
+                    const hue = (i * 137) % 360; // 使用黄金角分布颜色
+                    return `hsla(${hue}, 70%, 60%, 0.7)`;
+                });
+                
+                new Chart(ctx, {
+                    type: 'pie',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: data,
+                            backgroundColor: colors,
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const label = context.label || '';
+                                        const value = context.raw || 0;
+                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                        const percentage = Math.round((value / (total - 1)) * 100);
                                         return `${label}: ${value} (${percentage}%)`;
                                     }
                                 }
