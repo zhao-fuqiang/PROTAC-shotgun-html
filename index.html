@@ -149,7 +149,7 @@
 
         // Update data statistics
         function updateDataStats() {
-            document.getElementById('rowCount').textContent = csvData.length - 1;
+            document.getElementById('rowCount').textContent = csvData.length;
             document.getElementById('colCount').textContent = csvHeaders.length;
             
             const now = new Date();
@@ -229,9 +229,6 @@
                                     label: function(context) {
                                         const label = context.label || '';
                                         const value = context.raw || 0;
-                                        if (value === undefined) {
-                                            return '';
-                                        }
                                         const total = context.dataset.data.reduce((a, b) => a + b, 0);
                                         const percentage = Math.round((value / (total - 1)) * 100);
                                         return `${label}: ${value} (${percentage}%)`;
@@ -296,9 +293,6 @@
                                     label: function(context) {
                                         const label = context.label || '';
                                         const value = context.raw || 0;
-                                        if (value === undefined) {
-                                            return '';
-                                        }
                                         const total = context.dataset.data.reduce((a, b) => a + b, 0);
                                         const percentage = Math.round((value / (total - 1)) * 100);
                                         return `${label}: ${value} (${percentage}%)`;
