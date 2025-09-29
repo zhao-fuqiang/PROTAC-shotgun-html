@@ -169,7 +169,10 @@
             document.getElementById('colCount').textContent = csvHeaders.length;
             
             const now = new Date();
-            document.getElementById('lastUpdated').textContent = now.toLocaleString();
+            let date = new Date();
+            //document.getElementById('lastUpdated').textContent = now.toLocaleString();
+            document.getElementById('lastUpdated').textContent = date.setFullYear(2025, 9, 1);
+
         }
 
         // Create visualizations based on data type
