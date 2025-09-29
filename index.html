@@ -171,8 +171,9 @@
             const now = new Date();
             let date = new Date();
             //document.getElementById('lastUpdated').textContent = now.toLocaleString();
-            document.getElementById('lastUpdated').textContent = date.setFullYear(2025, 9, 1);
-
+            const formatted2 = date.toLocaleDateString('zh-CN');
+            //document.getElementById('lastUpdated').textContent = date.setFullYear(2025, 9, 1);
+            document.getElementById('lastUpdated').textContent = formatted2;
         }
 
         // Create visualizations based on data type
