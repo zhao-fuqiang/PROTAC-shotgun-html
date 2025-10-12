@@ -185,6 +185,7 @@
             if (csvHeaders.length >= 2) {
                 createPieChart(chartsContainer);      // 饼图
                 createBoxPlot(chartsContainer);       // 箱形图
+                createBoxPlotContact(chartsContainer);       // 箱形图
                 //createLineChart(chartsContainer);     // 折线图
                 //createBarChart(chartsContainer);      // 柱状图
             }
@@ -404,7 +405,7 @@
                   labels: ['SASA_E3_POI', 'SASA_E3', 'SASA_POI', 'Interface'],
                   datasets: [
                     {
-                      label: 'SASA Area',
+                      label: 'SASA Area: Interface Area = (SASA_E3 + SASA_POI - SASA_E3_POI) / 2',
                       data: [
                         { min: boxdata[0][0], q1: boxdata[0][1], median: boxdata[0][2], q3: boxdata[0][3], max: boxdata[0][4] },
                         { min: boxdata[1][0], q1: boxdata[1][1], median: boxdata[1][2], q3: boxdata[1][3], max: boxdata[1][4] },
@@ -426,6 +427,102 @@
                         type: 'logarithmic',
                         min: 1,
                         max: 100000,
+                      },
+                    },
+                  },
+                });
+            }
+        }
+
+        // 创建箱形图
+        function createBoxPlotContact(container) {
+            // 寻找适合箱形图的数值列
+            //const numericColumns = [];
+            //csvHeaders.forEach(header => {
+            //    if (typeof csvData[0][header] === 'number') {
+            //        numericColumns.push(header);
+            //    }
+            //});
+            const numericColumns = [];
+            numericColumns.push("count (cutoff 3 A)");
+            numericColumns.push("count (cutoff 3.5 A)");
+            if (numericColumns.length > 0) {
+                const chartDiv = document.createElement('div');
+                chartDiv.className = 'chart-container';
+                chartDiv.innerHTML = `<h3 class="text-xl font-medium mb-4">Distribution of Close Contact</h3>
+                                     <canvas id="ContactboxPlot"></canvas>`;
+                container.appendChild(chartDiv);
+                
+                const ctx = document.getElementById('ContactboxPlot').getContext('2d');
+                
+                // 为每个数值列准备箱形图数据
+                const datasets = numericColumns.map((column, index) => {
+                    // 收集该列的所有值
+                    const values = csvData.map(row => row[column]).filter(value => !isNaN(value));
+                    //console.log("column for boxplot:", column);
+                    //console.log("data for boxplot:", values);
+                    
+                    // 计算箱形图所需的统计数据
+                    const sorted = [...values].sort((a, b) => a - b);
+                    const q1 = getQuartile(sorted, 25);
+                    const q3 = getQuartile(sorted, 75);
+                    const median = getQuartile(sorted, 50);
+                    const iqr = q3 - q1;
+                    const min = Math.max(sorted[0], q1 - 1.5 * iqr);
+                    const max = Math.min(sorted[sorted.length - 1], q3 + 1.5 * iqr);
+                    
+                    // 识别异常值
+                    const outliers = sorted.filter(value => value < min || value > max);
+                    
+                    return {
+                        label: column,
+                        data: [
+                            min,       // min
+                            q1,        // q1
+                            median,    // median
+                            q3,        // q3
+                            max        // max
+                        ],
+                        backgroundColor: `rgba(${30 + index * 50}, ${144 + index * 30}, ${255 - index * 30}, 0.7)`,
+                        borderColor: `rgba(${30 + index * 50}, ${144 + index * 30}, ${255 - index * 30}, 1)`,
+                        borderWidth: 1,
+                        outlierRadius: 4,
+                        outlierColor: `rgba(${30 + index * 50}, ${144 + index * 30}, ${255 - index * 30}, 0.6)`,
+                        outlierBackgroundColor: '#fff',
+                        outlierBorderWidth: 1
+                    };
+                });
+                console.log("data for boxplot:", datasets);
+                const boxdata = []
+                boxdata.push(datasets[0].data);
+                boxdata.push(datasets[1].data);
+                console.log("data for boxplot:", boxdata);
+                
+                // 箱线图数据
+                const data = {
+                  labels: ['Cutoff 3', 'Cutoff 3.5'],
+                  datasets: [
+                    {
+                      label: 'Close Contact between E3 and POI',
+                      data: [
+                        { min: boxdata[0][0], q1: boxdata[0][1], median: boxdata[0][2], q3: boxdata[0][3], max: boxdata[0][4] },
+                        { min: boxdata[1][0], q1: boxdata[1][1], median: boxdata[1][2], q3: boxdata[1][3], max: boxdata[1][4] },
+                      ],
+                    },
+                  ],
+                };
+
+                // 创建 Chart 实例，指定类型为 'boxplot'
+                const boxPlotChart = new Chart(ctx, {
+                  type: 'boxplot', // 关键：指定箱线图类型
+                  data: data,
+                  options: {
+                    scales: {
+                      y: {
+                        //beginAtZero: true,
+                        //type: 'logarithmic',
+                        min: -5,
+                        max: 25,
                       },
                     },
                   },
